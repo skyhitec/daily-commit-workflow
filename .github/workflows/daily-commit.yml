@@ -1,0 +1,36 @@
+name: Daily Repository Touch (DevSync)
+
+on:
+  schedule:
+    - cron: '15 02 * * *'   # daily at 02:15 UTC
+  workflow_dispatch: {}     # allows manual run
+
+permissions:
+  contents: write
+
+jobs:
+  daily-touch:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Setup Git user
+        run: |
+          git config user.name "devsync-bot"
+          git config user.email "actions@devsync.local"
+
+      - name: Update status file — 23f1000204@ds.study.iitm.ac.in
+        run: |
+          FILE="daily-activity.md"
+          TIMESTAMP="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          # Create/update file with timestamp (always changes content)
+          echo "## Daily activity: $TIMESTAMP" > "$FILE"
+          echo "- Workflow run ID: $GITHUB_RUN_ID" >> "$FILE"
+          echo "- Triggered by: $GITHUB_ACTOR" >> "$FILE"
+          git add "$FILE"
+          git commit -m "chore: daily update ($TIMESTAMP) [automated]" || echo "No changes to commit"
+          git push origin HEAD:${GITHUB_REF##*/} || echo "Push failed"
